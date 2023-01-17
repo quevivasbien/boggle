@@ -7,8 +7,8 @@ pub mod board;
 use board::Board;
 
 
-const BOARD_SIZE: usize = 5;  // must be > 1
-const MIN_LENGTH: usize = 4;  // must be > 1
+const BOARD_SIZE: usize = 4;  // must be > 1
+const MIN_LENGTH: usize = 3;  // must be > 1
 
 // constants determining how found words are arranged
 const WORDS_IN_COLUMN: usize = 12;  // must be > 0
@@ -32,23 +32,14 @@ fn expand_qu(word: String) -> String {
     word.replace("q", "qu")
 }
 
-fn has_vowel(word: &String) -> bool {
-    for c in word.chars() {
-        if "aeiouy".contains(c) {
-            return true;
-        }
-    }
-    false
-}
-
 fn get_words() -> Vec<String> {
     let mut words = vec![];
-    let file = File::open("words_alpha.txt").expect("Unable to load words file");
+    let file = File::open("word_list.txt").expect("Unable to load words file");
     let reader = BufReader::new(file);
     for line in reader.lines() {
-        let word = compress_qu(line.unwrap().trim().to_lowercase());
-        // filter out invalid "words"
-        if word.len() >= MIN_LENGTH && has_vowel(&word) {
+        let word = compress_qu(line.unwrap());
+        // filter out short words
+        if word.len() >= MIN_LENGTH {
             words.push(word);
         }
     }
@@ -66,20 +57,23 @@ fn get_char_dist(words: &Vec<String>) -> Vec<f64> {
     counts.into_iter().map(|x| x as f64 / total).collect()
 }
 
-pub fn start_screen(words: &Vec<String>) {
-    println!("Welcome to {}{}{}{}{}{}!" , "B".red().bold(), "O".green().bold(), "G".blue().bold(), "G".yellow().bold(), "L".magenta().bold(), "E".cyan().bold());
-
-    println!("Find as many words as you can in the board. Words must be at least {} letters long.", MIN_LENGTH);
-
-    println!("Enter a word to check if it's in the board. Enter a command to do something else.");
-    println!("{}", HELP_MESSAGE);
-
-    println!("Press enter to start...");
+fn await_enter() {
     let mut input = String::new();
     std::io::stdin().read_line(&mut input).unwrap();
     if input.trim() == "!quit" {
         quit();
     }
+}
+
+fn start_screen(words: &Vec<String>) {
+    execute!(stdout(), terminal::Clear(terminal::ClearType::All), cursor::MoveTo(0, 0)).unwrap();
+    println!("Welcome to {}{}{}{}{}{}!" , "B".red().bold(), "O".green().bold(), "G".blue().bold(), "G".yellow().bold(), "L".magenta().bold(), "E".cyan().bold());
+
+    println!("Find as many words as you can in the board. Words must have at least {} letters.", MIN_LENGTH);
+    println!("\n{}", HELP_MESSAGE);
+
+    println!("Press enter to start...");
+    await_enter();
     new_game(words);
 }
 
@@ -91,19 +85,14 @@ fn quit() {
 fn process_command(command: &str, board: Board, words_found: Vec<String>) {
     match command {
         "help" => help_screen(board, words_found),
-        "check" => {
-            print_all_words(&board, &words_found);
-            thread::sleep(time::Duration::from_secs(2));
-            print!("\n\n");
-            start_screen(board.words);
-        },
+        "check" => show_score(board, words_found),
         "quit" => quit(),
         _ => { println!("Unknown command: {} -- type !help for list of commands", command); },
     }
 }
 
 // prints all possible words in the board & number + percentage of words found
-fn print_all_words(board: &Board, words_found: &Vec<String>) {
+fn show_score(board: Board, words_found: Vec<String>) {
     execute!(stdout(), terminal::Clear(terminal::ClearType::All), cursor::MoveTo(0, 0)).unwrap();
     let found = board.find_all_words();
     println!("{} total words in puzzle:", found.len());
@@ -125,6 +114,11 @@ fn print_all_words(board: &Board, words_found: &Vec<String>) {
     println!("You found {} words ({:.1}%)", words_found.len(), words_found.len() as f64 / found.len() as f64 * 100.0);
     // reset cursor
     execute!(stdout(), cursor::SetCursorShape(cursor::CursorShape::Block)).unwrap();
+
+    thread::sleep(time::Duration::from_millis(500));
+    println!("\nPress enter to return to the main screen...");
+    await_enter();
+    start_screen(board.words);
 }
 
 fn help_screen(board: Board, words_found: Vec<String>) {
@@ -138,7 +132,7 @@ fn help_screen(board: Board, words_found: Vec<String>) {
         quit();
     }
     // re-enter game loop
-    game_loop(board, words_found)
+    game_loop(board, words_found);
 }
 
 fn display_words_found(words_found: &Vec<String>) {

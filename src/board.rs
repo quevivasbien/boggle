@@ -17,15 +17,15 @@ fn get_neighbors(i: usize, visited: &Vec<usize>) -> Vec<usize> {
     let x = (i % BOARD_SIZE) as i32;
     let y = (i / BOARD_SIZE) as i32;
     [
-        (x - 1, y - 1),
-        (x - 1, y),
-        (x - 1, y + 1),
-        (x, y - 1),
-        (x, y),
-        (x, y + 1),
-        (x + 1, y - 1),
-        (x + 1, y),
         (x + 1, y + 1),
+        (x + 1, y),
+        (x + 1, y - 1),
+        (x, y + 1),
+        (x, y),
+        (x, y - 1),
+        (x - 1, y + 1),
+        (x - 1, y),
+        (x - 1, y - 1),
     ].into_iter().filter(
         |(x, y)| *x >= 0 && *x < (BOARD_SIZE as i32) && *y >= 0 && *y < (BOARD_SIZE as i32)
     ).map(
